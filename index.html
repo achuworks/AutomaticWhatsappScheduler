@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp Message Scheduler</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.21.1/axios.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f0f2f5;
+        }
+
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            color: #128C7E;
+            text-align: center;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
+        }
+
+        input[type="text"],
+        input[type="time"],
+        textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        .checkbox-group {
+            margin: 10px 0;
+        }
+
+        button {
+            background-color: #128C7E;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+        }
+
+        button:hover {
+            background-color: #075E54;
+        }
+
+        .scheduled-messages {
+            margin-top: 20px;
+        }
+
+        .message-card {
+            background-color: #DCF8C6;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            position: relative;
+        }
+
+        .delete-btn {
+            position: absolute;
+            right: 10px;
+            top: 10px;
+            background-color: #DC3545;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+
+        .delete-btn:hover {
+            background-color: #C82333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>WhatsApp Message Scheduler</h1>
+        
+        <form id="scheduleForm">
+            <div class="form-group">
+                <label for="receiver">Receiver Name:</label>
+                <input type="text" id="receiver" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="message">Message:</label>
+                <textarea id="message" rows="4" required></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="time">Time:</label>
+                <input type="time" id="time" required>
+            </div>
+            
+            <div class="checkbox-group">
+                <input type="checkbox" id="repeat_daily">
+                <label for="repeat_daily">Repeat Daily</label>
+            </div>
+            
+            <button type="submit">Schedule Message</button>
+        </form>
+
+        <div class="scheduled-messages">
+            <h2>Scheduled Messages</h2>
+            <div id="messagesList"></div>
+        </div>
+    </div>
+
+    <script>
+        // Load scheduled messages
+        function loadMessages() {
+            axios.get('/get_messages')
+                .then(response => {
+                    const messagesList = document.getElementById('messagesList');
+                    messagesList.innerHTML = '';
+                    
+                    response.data.forEach(msg => {
+                        const messageCard = document.createElement('div');
+                        messageCard.className = 'message-card';
+                        messageCard.innerHTML = `
+                            <button class="delete-btn" onclick="deleteMessage('${msg.receiver}', '${msg.message}', '${msg.time}')">×</button>
+                            <strong>To:</strong> ${msg.receiver}<br>
+                            <strong>Message:</strong> ${msg.message}<br>
+                            <strong>Time:</strong> ${msg.time}<br>
+                            <strong>Repeat Daily:</strong> ${msg.repeat_daily ? 'Yes' : 'No'}
+                        `;
+                        messagesList.appendChild(messageCard);
+                    });
+                })
+                .catch(error => console.error('Error loading messages:', error));
+        }
+
+        // Schedule new message
+        document.getElementById('scheduleForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const data = {
+                receiver: document.getElementById('receiver').value,
+                message: document.getElementById('message').value,
+                time: document.getElementById('time').value,
+                repeat_daily: document.getElementById('repeat_daily').checked
+            };
+            
+            axios.post('/schedule', data)
+                .then(response => {
+                    loadMessages();
+                    this.reset();
+                })
+                .catch(error => console.error('Error scheduling message:', error));
+        });
+
+        // Delete message
+        function deleteMessage(receiver, message, time) {
+            axios.post('/delete_message', { receiver, message, time })
+                .then(response => loadMessages())
+                .catch(error => console.error('Error deleting message:', error));
+        }
+
+        // Load messages on page load
+        loadMessages();
+    </script>
+</body>
+</html>
